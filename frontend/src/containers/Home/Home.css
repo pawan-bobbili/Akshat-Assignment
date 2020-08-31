@@ -1,0 +1,25 @@
+.ButtonsParent {
+  margin-top: 18%;
+  border: 0;
+  padding-left: 28%;
+  padding-right: 20%;
+}
+
+.HomeButtons {
+  padding-left: 50px;
+  padding-right: 50px;
+  padding-top: 20px;
+  padding-bottom: 20px;
+  font-size: 32px;
+  margin-right: 20px;
+  font-weight: bolder;
+  border-radius: 6px;
+}
+
+.pass {
+  color: blue;
+}
+
+.Out {
+  color: red;
+}
