@@ -2,9 +2,11 @@ import React from "react";
 import axios from "axios";
 import { withRouter } from "react-router-dom";
 import ReCAPTCHA from "react-google-recaptcha";
+import GoogleLogin from "react-google-login";
 
 import "./auth.css";
 
+//For Error Handling
 import makeToast from "../../components/Toaster";
 
 class Auth extends React.Component {
@@ -20,10 +22,75 @@ class Auth extends React.Component {
     this.captcha = null;
   }
 
+  //GOOGLE SIGN-IN SUCCESS
+  gsucess = (response) => {
+    const email = response.profileObj.email;
+    axios
+      .post(
+        "http://localhost:9000/auth/signup",
+        JSON.stringify({
+          email: email,
+          password: "Random for now",
+          google: true,
+        }),
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      )
+      .then((response) => {
+        if (response.status !== 200 && response.data !== 201) {
+          return makeToast("error", response.data.errors[0]);
+        }
+        return axios.post(
+          "http://localhost:9000/auth/signin",
+          JSON.stringify({
+            email: email,
+            password: "Random for now",
+            google: true,
+          }),
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+      })
+      .then((response) => {
+        if (response.status !== 200 && response.data !== 201) {
+          return makeToast("error", response.data.errors[0]);
+        }
+        localStorage.setItem("token", response.data.token);
+        setTimeout(
+          () => localStorage.removeItem("token"),
+          response.data.expiresIn * 1000
+        );
+        this.props.history.push("/home");
+        return axios.post(
+          "http://localhost:9000/auth/preforgetpassword",
+          JSON.stringify({ email: email, google: true }),
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+      })
+      .catch((err) => makeToast("error", err.response.data.errors[0]));
+  };
+
+  //GOOGLE SIGN-IN FAILURE
+  gfailure = (response) => {
+    makeToast("error", "Google verification failed");
+  };
+
+  //HUMAN VERIFICATION TOKEN
   changeHandler = (value) => {
     this.value = value;
   };
 
+  // SIGNIN <-> SIGN UP CONVERSION
   toggleForm = () => {
     this.setState((prevState) => {
       return { signup: !prevState.signup };
@@ -31,6 +98,7 @@ class Auth extends React.Component {
     this.captcha.reset();
   };
 
+  //INPUT CHAGE HANDLER FOR FORM
   inputChangeHandler = (event) => {
     event.preventDefault();
     this.setState({ [event.target.name]: event.target.value });
@@ -83,7 +151,6 @@ class Auth extends React.Component {
           }
         )
         .then((response) => {
-          console.log(response);
           if (response.status !== 200 && response.status !== 201) {
             return makeToast("error", response.data.errors[0]);
           }
@@ -103,7 +170,7 @@ class Auth extends React.Component {
     axios
       .post(
         "http://localhost:9000/auth/preforgetpassword",
-        JSON.stringify({ email: this.state.email }),
+        JSON.stringify({ email: this.state.email, value: this.value }),
         {
           headers: {
             "Content-Type": "application/json",
@@ -130,6 +197,14 @@ class Auth extends React.Component {
               : "Please fill in this form to Sign In !"}
           </p>
           <hr />
+          <div className="form-group">
+            <GoogleLogin
+              clientId="1098304873310-n2nbf718kflpin1o6uljuclf04ui0049.apps.googleusercontent.com"
+              buttonText="Sign In with Google"
+              onSuccess={this.gsucess}
+              onFailure={this.gfailure}
+            />
+          </div>
           <div className="form-group">
             <div className="input-group">
               <span className="input-group-addon">

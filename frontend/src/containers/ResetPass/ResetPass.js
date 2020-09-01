@@ -3,6 +3,8 @@ import axios from "axios";
 import { withRouter } from "react-router-dom";
 
 import "./ResetPass.css";
+
+//For Error Handling
 import makeToast from "../../components/Toaster";
 
 class ResetPass extends React.Component {
@@ -15,6 +17,7 @@ class ResetPass extends React.Component {
     };
   }
   componentDidMount() {
+    //CHECKING AUTHORIZAION
     if (!localStorage.getItem("token")) {
       makeToast("warning", "Get Authorization first !");
       this.props.history.replace("/");

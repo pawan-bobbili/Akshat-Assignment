@@ -17,6 +17,7 @@ class Home extends React.Component {
   };
 
   componentDidMount() {
+    //CHECKING AUTHORIZATION
     if (!localStorage.getItem("token")) {
       makeToast("warning", "Get Authorization first !");
       this.props.history.replace("/");

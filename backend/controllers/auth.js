@@ -6,7 +6,7 @@ const randomstring = require("randomstring");
 const nodemailer = require("nodemailer");
 const sendgridtransport = require("nodemailer-sendgrid-transport");
 
-const {SEND_GRID,SERVER_KEY,BCRYPT,JWT} = require("../secrets");
+const { SEND_GRID, SERVER_KEY, BCRYPT, JWT } = require("../secrets");
 const User = require("../models/user");
 const { default: Axios } = require("axios");
 
@@ -18,28 +18,34 @@ const transporter = nodemailer.createTransport(
   })
 );
 
+// SIGNUP
 exports.SignupHandler = async (req, res, next) => {
   const serverKey = SERVER_KEY;
   const humankey = req.body.value;
-  try {
-    const ishuman = await axios.post(
-      `https://www.google.com/recaptcha/api/siteverify`,
-      `secret=${serverKey}&response=${humankey}`,
-      {
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
-        },
+  //IF NOT CAME BY GOOGLE oAUTH
+  if (!req.body.google) {
+    //HUMAN VERIFICATION
+    try {
+      const ishuman = await axios.post(
+        `https://www.google.com/recaptcha/api/siteverify`,
+        `secret=${serverKey}&response=${humankey}`,
+        {
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
+          },
+        }
+      );
+      if (!ishuman.data.success) {
+        throw { statusCode: 500, msg: ["Human Verification failed"] };
       }
-    );
-    if (!ishuman.data.success) {
-      throw { statusCode: 500, msg: ["Human Verification failed"] };
+    } catch (err) {
+      return next(err);
     }
-  } catch (err) {
-    return next(err);
   }
   let errors = validationResult(req);
   if (!errors.isEmpty()) {
+    //VALIDATION ERRORS
     errors = errors.array();
     const errorArray = [];
     let i = 0;
@@ -52,8 +58,14 @@ exports.SignupHandler = async (req, res, next) => {
   }
   const email = req.body.email;
   const password = req.body.password;
-  bcryptjs
-    .hash(password, BCRYPT)
+  User.findOne({ email: email })
+    .then((userDoc) => {
+      if (userDoc) {
+        const err = { statusCode: 404, msg: ["User already exists"] };
+        throw err;
+      }
+      return bcryptjs.hash(password, BCRYPT);
+    })
     .then((hashedPwd) => {
       return User.create({
         email: email,
@@ -66,29 +78,33 @@ exports.SignupHandler = async (req, res, next) => {
     .catch((err) => next(err));
 };
 
-exports.SigninHandler = (req, res, next) => {
+//SIGNIN
+exports.SigninHandler = async (req, res, next) => {
   const serverKey = SERVER_KEY;
   const humankey = req.body.value;
-  try {
-    const ishuman = await axios.post(
-      `https://www.google.com/recaptcha/api/siteverify`,
-      `secret=${serverKey}&response=${humankey}`,
-      {
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
-        },
+  //IF NOT SENT BY GOOGLE OAUTH
+  if (!req.body.google) {
+    //HUMAN VERIFICATION
+    try {
+      const ishuman = await axios.post(
+        `https://www.google.com/recaptcha/api/siteverify`,
+        `secret=${serverKey}&response=${humankey}`,
+        {
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
+          },
+        }
+      );
+      if (!ishuman.data.success) {
+        throw { statusCode: 500, msg: ["Human Verification failed"] };
       }
-    );
-    if (!ishuman.data.success) {
-      throw { statusCode: 500, msg: ["Human Verification failed"] };
+    } catch (err) {
+      return next(err);
     }
-  } catch (err) {
-    return next(err);
   }
   const email = req.body.email;
   const password = req.body.password;
-  console.log(email, password);
   User.findOne({ email: email })
     .then((userDoc) => {
       if (!userDoc) {
@@ -112,9 +128,32 @@ exports.SigninHandler = (req, res, next) => {
     .catch((err) => next(err));
 };
 
-exports.preFogotPassword = (req, res, next) => {
+//STEP 1 OF FORGET PASSWORD (SENDING MAIL)
+exports.preFogotPassword = async (req, res, next) => {
   const email = req.body.email;
   let temp = "";
+  const serverKey = SERVER_KEY;
+  const humankey = req.body.value;
+  if (!req.body.google) {
+    //HUMAN VERIFICATION
+    try {
+      const ishuman = await axios.post(
+        `https://www.google.com/recaptcha/api/siteverify`,
+        `secret=${serverKey}&response=${humankey}`,
+        {
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
+          },
+        }
+      );
+      if (!ishuman.data.success) {
+        throw { statusCode: 500, msg: ["Human Verification failed"] };
+      }
+    } catch (err) {
+      return next(err);
+    }
+  }
   User.findOne({ email: email })
     .then((userDoc) => {
       if (!userDoc) {
@@ -147,6 +186,7 @@ exports.preFogotPassword = (req, res, next) => {
     .catch((err) => next(err));
 };
 
+//STEP 2 OF FORGETPASSWORD (VALIDATING TOKEN)
 exports.forgotPassword = (req, res, next) => {
   const resetToken = req.headers.token;
   User.findOne({ resetToken: resetToken })
@@ -168,6 +208,7 @@ exports.forgotPassword = (req, res, next) => {
     .catch((err) => next(err));
 };
 
+//STEP 3 OF FORGET PASSWORD (NEW PASSWORD GENERATION)
 exports.postForgotPassword = (req, res, next) => {
   const newPassword = req.body.password;
   const email = req.headers.email;
@@ -196,6 +237,7 @@ exports.postForgotPassword = (req, res, next) => {
     .catch((err) => next(err));
 };
 
+//RESET PASSWORD
 exports.resetPassword = (req, res, next) => {
   const email = req.userEmail;
   const oldPwd = req.body.oldPwd;

@@ -3,6 +3,8 @@ import axios from "axios";
 import { withRouter } from "react-router-dom";
 
 import "./ForgotPass.css";
+
+//For Error Handling
 import makeToast from "../../components/Toaster";
 
 class ForgotPass extends React.Component {
@@ -40,6 +42,7 @@ class ForgotPass extends React.Component {
       .catch((err) => makeToast("error", err.response.data.errors[0]));
   };
   componentDidMount() {
+    //VALIDATING TOKEN
     const token = this.props.match.params.token;
     console.log(token);
     axios
