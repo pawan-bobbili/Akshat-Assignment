@@ -9,7 +9,7 @@ Akshat Backend Assignment
 2. Run npm on both frontend and backend
 
 ```bash
-    npm init
+    npm install
     npm start
 ```
 
