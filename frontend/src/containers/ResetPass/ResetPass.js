@@ -14,6 +14,7 @@ class ResetPass extends React.Component {
       oldPwd: "",
       newPwd: "",
       cnfnewPwd: "",
+      loader: false,
     };
   }
   componentDidMount() {
@@ -28,6 +29,7 @@ class ResetPass extends React.Component {
   };
   submissionHandler = (e) => {
     e.preventDefault();
+    this.setState({ loader: true });
     if (this.state.newPwd !== this.state.cnfnewPwd) {
       return makeToast("error", "Passwords didn't match");
     }
@@ -53,7 +55,10 @@ class ResetPass extends React.Component {
         makeToast("success", "Password reset Succesfull");
         this.props.history.replace("/home");
       })
-      .catch((err) => makeToast("error", err.response.data.errors[0]));
+      .catch((err) => {
+        makeToast("error", err.response.data.errors[0]);
+        this.setState({ loader: false });
+      });
   };
   render() {
     return (
@@ -117,7 +122,12 @@ class ResetPass extends React.Component {
               className="btn btn-primary btn-lg"
               onClick={this.submissionHandler}
             >
-              Change Password
+              {"Change Password"}
+              {this.state.loader == true ? (
+                <i className="fas fa-spinner fa-spin m-2"></i>
+              ) : (
+                ""
+              )}
             </button>
           </div>
         </form>

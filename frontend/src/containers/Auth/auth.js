@@ -17,6 +17,7 @@ class Auth extends React.Component {
       password: "",
       confirmPwd: "",
       signup: true,
+      loader: false,
     };
     this.value = "";
     this.captcha = null;
@@ -111,6 +112,7 @@ class Auth extends React.Component {
       makeToast("error", "Passwords didn't match !!");
       return;
     }
+    this.setState({ loader: true });
     if (this.state.signup) {
       axios
         .post(
@@ -130,10 +132,13 @@ class Auth extends React.Component {
           if (response.status !== 200 && response.status !== 201) {
             return makeToast("error", response.data.errors[0]);
           }
-          this.setState({ signup: false, confirmPwd: "" });
+          this.setState({ signup: false, confirmPwd: "", loader: false });
           makeToast("success", "Sign In to continue");
         })
-        .catch((err) => makeToast("error", err.response.data.errors[0]));
+        .catch((err) => {
+          makeToast("error", err.response.data.errors[0]);
+          this.setState({ loader: false });
+        });
     } else {
       console.log(this.state.email, this.state.password);
       axios
@@ -154,6 +159,7 @@ class Auth extends React.Component {
           if (response.status !== 200 && response.status !== 201) {
             return makeToast("error", response.data.errors[0]);
           }
+          this.setState({ loader: false });
           localStorage.setItem("token", response.data.token);
           setTimeout(
             () => localStorage.removeItem("token"),
@@ -161,7 +167,10 @@ class Auth extends React.Component {
           );
           this.props.history.push("/home");
         })
-        .catch((err) => makeToast("error", err.response.data.errors[0]));
+        .catch((err) => {
+          makeToast("error", err.response.data.errors[0]);
+          this.setState({ loader: false });
+        });
     }
   };
 
@@ -197,14 +206,16 @@ class Auth extends React.Component {
               : "Please fill in this form to Sign In !"}
           </p>
           <hr />
-          <div className="form-group">
-            <GoogleLogin
-              clientId="1098304873310-n2nbf718kflpin1o6uljuclf04ui0049.apps.googleusercontent.com"
-              buttonText="Sign In with Google"
-              onSuccess={this.gsucess}
-              onFailure={this.gfailure}
-            />
-          </div>
+          {this.state.signup ? (
+            <div className="form-group">
+              <GoogleLogin
+                clientId="1098304873310-n2nbf718kflpin1o6uljuclf04ui0049.apps.googleusercontent.com"
+                buttonText="Signup with Google"
+                onSuccess={this.gsucess}
+                onFailure={this.gfailure}
+              />
+            </div>
+          ) : null}
           <div className="form-group">
             <div className="input-group">
               <span className="input-group-addon">
@@ -280,6 +291,11 @@ class Auth extends React.Component {
               onClick={this.submissionHandler}
             >
               {this.state.signup ? "Sign Up" : "Sign In"}
+              {this.state.loader == true ? (
+                <i className="fas fa-spinner fa-spin m-2"></i>
+              ) : (
+                ""
+              )}
             </button>
           </div>
         </form>

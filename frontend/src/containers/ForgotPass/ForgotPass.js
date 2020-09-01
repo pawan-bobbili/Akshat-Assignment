@@ -11,6 +11,7 @@ class ForgotPass extends React.Component {
   state = {
     password: "",
     cnfpassword: "",
+    loader: false,
   };
   email = "";
   inputChangeHandler = (e) => {
@@ -18,6 +19,7 @@ class ForgotPass extends React.Component {
   };
   submitHandler = (e) => {
     e.preventDefault();
+    this.setState({ loader: true });
     if (this.state.password !== this.state.cnfpassword) {
       return makeToast("error", "Passwords didn't match");
     }
@@ -36,10 +38,14 @@ class ForgotPass extends React.Component {
         if (response.status !== 200 && response.status !== 201) {
           makeToast("error", response.data.error.errors[0]);
         }
+        this.setState({ loader: false });
         makeToast("sucess", "Password changed Succesfully");
         this.props.history.replace("/");
       })
-      .catch((err) => makeToast("error", err.response.data.errors[0]));
+      .catch((err) => {
+        makeToast("error", err.response.data.errors[0]);
+        this.setState({ loader: false });
+      });
   };
   componentDidMount() {
     //VALIDATING TOKEN
@@ -109,7 +115,12 @@ class ForgotPass extends React.Component {
               className="btn btn-primary btn-lg"
               onClick={this.submitHandler}
             >
-              Reset Password
+              {"Reset Password"}
+              {this.state.loader == true ? (
+                <i className="fas fa-spinner fa-spin m-2"></i>
+              ) : (
+                ""
+              )}
             </button>
           </div>
         </form>
